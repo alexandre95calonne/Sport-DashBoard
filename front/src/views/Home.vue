@@ -1,9 +1,9 @@
 <script>
 import axios from 'axios'
 
-import { Chart,PieController, DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement } from 'chart.js';
+import { Chart, PieController, DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, BubbleController, PointElement } from 'chart.js';
 
-Chart.register(DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, PieController);
+Chart.register(DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, PieController, BubbleController, PointElement);
 
 import femininSVG from '@/assets/feminin.svg'
 import masculinSVG from '@/assets/masculin.svg'
@@ -43,20 +43,21 @@ export default {
                 this.tauxMoyen = (totalTaux / data.length).toFixed(2) + "%"
 
                 const totalTauxHommes = data
-                .filter(person => person.genre === "Homme")
-                .reduce((sum, person) => sum + parseFloat(person.taux_participation.replace(' %', '')), 0)
+                    .filter(person => person.genre === "Homme")
+                    .reduce((sum, person) => sum + parseFloat(person.taux_participation.replace(' %', '')), 0)
 
                 this.tauxMoyenHommes = (totalTauxHommes / this.totalHommes).toFixed(2) + "%"
 
                 const totalTauxFemmes = data
-                .filter(person => person.genre === "Femme")
-                .reduce((sum, person) => sum + parseFloat(person.taux_participation.replace(' %', '')), 0)
+                    .filter(person => person.genre === "Femme")
+                    .reduce((sum, person) => sum + parseFloat(person.taux_participation.replace(' %', '')), 0)
 
                 this.tauxMoyenFemmes = (totalTauxFemmes / this.totalFemmes).toFixed(2) + "%"
 
                 this.initDonutChart()
                 this.initBarChart(data)
                 this.initPieChart()
+                this.initBubbleChart(data)
             })
     },
     methods: {
@@ -126,31 +127,29 @@ export default {
             const ctx = this.$refs.barCanvas.getContext('2d')
             new Chart(ctx, config)
         },
-
-        updatePieChart() {
-            let dataToDisplay = []
-            
-            if (this.selectedGenre === 'all') {
-                dataToDisplay = [parseFloat(this.tauxMoyen)]
-            } else if (this.selectedGenre === 'homme') {
-                dataToDisplay = [parseFloat(this.tauxMoyenHommes)]
-            } else {
-                dataToDisplay = [parseFloat(this.tauxMoyenFemmes)]
+        initPieChart() {
+            if (!this.$refs.pieCanvas) {
+                console.error("Le canvas n'est pas disponible dans le DOM.");
+                return;
             }
 
-            this.pieChartData.data.datasets = [{
-                ...this.pieChartData.data.datasets[0],
-                data: dataToDisplay
-            }]
-            this.pieChartData.update()
-        },
+            let percentage = 0
 
-        initPieChart() {
+            if (this.selectedGenre === 'all') {
+                percentage = parseFloat(this.tauxMoyen)
+            } else if (this.selectedGenre === 'homme') {
+                percentage = parseFloat(this.tauxMoyenHommes)
+            } else {
+                percentage = parseFloat(this.tauxMoyenFemmes)
+            }
+
+            const remainingPercentage = 100 - percentage
+
             const data = {
                 labels: ['Taux de participation'],
                 datasets: [{
-                    data: [parseFloat(this.tauxMoyen)],
-                    backgroundColor: ['#FF6384']
+                    data: [percentage, remainingPercentage],
+                    backgroundColor: ['#FF6384', '#E0E0E0']
                 }]
             }
 
@@ -161,7 +160,85 @@ export default {
 
             const ctx = this.$refs.pieCanvas.getContext('2d')
             this.pieChartData = new Chart(ctx, config)
+        },
+        updatePieChart() {
+            if (!this.pieChartData) {
+                console.error("Le graphique n'est pas initialisé.");
+                return;
+            }
+
+            this.pieChartData.destroy();
+            this.$nextTick(() => {
+                this.initPieChart();
+            });
+        },
+        initBubbleChart(data) {
+            const categoriesData = data.reduce((sum, employee) => {
+                const category = employee.categorie_socio_professionnelle;
+
+                if (!sum[category]) {
+                    sum[category] = {
+                        totalAge: 0,
+                        count: 0
+                    };
+                }
+
+                sum[category].totalAge += parseInt(employee.age);
+                sum[category].count++;
+
+                return sum;
+            }, {});
+
+            const labels = Object.keys(categoriesData);
+            const datasetsData = labels.map(label => {
+                const moyAge = (categoriesData[label].totalAge / categoriesData[label].count).toFixed(2);
+                return {
+                    x: label,
+                    y: moyAge,
+                    r: Math.sqrt(categoriesData[label].count) * 5
+                };
+            });
+
+            const config = {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        label: "Moyenne d'âge par catégorie",
+                        data: datasetsData,
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    title: {
+                        display: true,
+                        text: "Répartition de la moyenne d'âge par catégorie socio-professionnelle"
+                    },
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    scales: {
+                        x: {
+                            type: 'category',
+                            position: 'bottom',
+                            labels: labels
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left'
+                        }
+                    }
+                }
+            };
+
+            const ctx = this.$refs.bubbleCanvas.getContext('2d');
+            new Chart(ctx, config);
+
         }
+
     }
 }
 </script>
@@ -217,12 +294,11 @@ export default {
         <h3>Données génales</h3>
 
         <div class="donneesGen">
-            <div class="donut">
-                <canvas ref="donutCanvas" width="200" height="200"></canvas>
-            </div>
 
-            <div class="bat">
-                <canvas ref="barCanvas" width="500" height="200"></canvas>
+            
+
+            <div class="donut">
+                <canvas ref="donutCanvas" width="275" height="275"></canvas>
             </div>
 
             <div class="cat">
@@ -233,13 +309,21 @@ export default {
                 </select>
 
                 <div class="pie">
-                    <canvas ref="pieCanvas" width="200" height="200"></canvas>
+                    <canvas ref="pieCanvas" width="250" height="250"></canvas>
                 </div>
             </div>
+
+            <div class="bat">
+                <canvas ref="barCanvas" width="600" height="300"></canvas>
+            </div>
+
+            <div class="bubble">
+                <canvas ref="bubbleCanvas" width="600" height="300"></canvas>
+            </div>
+
         </div>
 
         <h3>Évolutions</h3>
-
 
     </div>
 </template>
@@ -318,12 +402,14 @@ export default {
 
     .donneesGen {
         width: 100%;
+        justify-content: space-around;
         display: flex;
+        flex-wrap: wrap;
         flex-direction: row;
 
         .donut {
-            height: 200px;
-            width: 200px;
+            height: 275px;
+            width: 275px;
             margin: 1rem 4rem 1rem 0;
 
             canvas {
@@ -333,9 +419,20 @@ export default {
         }
 
         .bat {
-            height: 200px;
-            width: 500px;
+            height: 300px;
+            width: 600px;
             margin: 1rem 4rem;
+
+            canvas {
+                height: 100%;
+                width: 100%;
+            }
+        }
+
+        .bubble {
+            height: 300px;
+            width: 600px;
+            margin: 1.5rem 4rem;
 
             canvas {
                 height: 100%;
@@ -347,9 +444,31 @@ export default {
             display: flex;
             flex-direction: column;
 
+            select {
+                font-size: 16px;
+                padding: 10px 15px;
+                border: none;
+                border-radius: 5px;
+                background-color: #F4F4F4;
+                color: #333;
+                transition: background-color 0.3s ease;
+                cursor: pointer;
+            }
+
+            select:hover {
+                background-color: #E9E9E9;
+            }
+
+            select:active,
+            select:focus {
+                outline: none;
+                background-color: #E0E0E0;
+            }
+
+
             .pie {
-                height: 200px;
-                width: 200px;
+                height: 250px;
+                width: 250px;
                 margin: 1rem 4rem 1rem 0;
 
                 canvas {
