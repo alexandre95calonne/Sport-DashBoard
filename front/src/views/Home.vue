@@ -1,9 +1,9 @@
 <script>
 import axios from 'axios'
 
-import { Chart, PieController, DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, BubbleController, PointElement, LineElement, LineController } from 'chart.js';
+import { Chart, PieController, DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, BubbleController, PointElement, LineElement, LineController } from 'chart.js'
 
-Chart.register(DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, PieController, BubbleController, PointElement, LineElement, LineController);
+Chart.register(DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, PieController, BubbleController, PointElement, LineElement, LineController)
 
 import femininSVG from '@/assets/feminin.svg'
 import masculinSVG from '@/assets/masculin.svg'
@@ -64,9 +64,9 @@ export default {
             }),
             axios.get("http://localhost:3002/api/evolutions")
                 .then(response => {
-                    this.evolutions = response.data;
-                    this.initLineChart();
-                });
+                    this.evolutions = response.data
+                    this.initLineChart()
+                })
     },
     methods: {
         initDonutChart() {
@@ -137,8 +137,8 @@ export default {
         },
         initPieChart() {
             if (!this.$refs.pieCanvas) {
-                console.error("Le canvas n'est pas disponible dans le DOM.");
-                return;
+                console.error("Le canvas n'est pas disponible dans le DOM.")
+                return
             }
 
             let percentage = 0
@@ -171,41 +171,41 @@ export default {
         },
         updatePieChart() {
             if (!this.pieChartData) {
-                console.error("Le graphique n'est pas initialisé.");
-                return;
+                console.error("Le graphique n'est pas initialisé.")
+                return
             }
 
-            this.pieChartData.destroy();
+            this.pieChartData.destroy()
             this.$nextTick(() => {
-                this.initPieChart();
-            });
+                this.initPieChart()
+            })
         },
         initBubbleChart(data) {
             const categoriesData = data.reduce((sum, employee) => {
-                const category = employee.categorie_socio_professionnelle;
+                const category = employee.categorie_socio_professionnelle
 
                 if (!sum[category]) {
                     sum[category] = {
                         totalAge: 0,
                         count: 0
-                    };
+                    }
                 }
 
-                sum[category].totalAge += parseInt(employee.age);
-                sum[category].count++;
+                sum[category].totalAge += parseInt(employee.age)
+                sum[category].count++
 
-                return sum;
-            }, {});
+                return sum
+            }, {})
 
-            const labels = Object.keys(categoriesData);
+            const labels = Object.keys(categoriesData)
             const datasetsData = labels.map(label => {
-                const moyAge = (categoriesData[label].totalAge / categoriesData[label].count).toFixed(2);
+                const moyAge = (categoriesData[label].totalAge / categoriesData[label].count).toFixed(2)
                 return {
                     x: label,
                     y: moyAge,
                     r: Math.sqrt(categoriesData[label].count) * 5
-                };
-            });
+                }
+            })
 
             const config = {
                 type: 'bubble',
@@ -240,10 +240,10 @@ export default {
                         }
                     }
                 }
-            };
+            }
 
-            const ctx = this.$refs.bubbleCanvas.getContext('2d');
-            new Chart(ctx, config);
+            const ctx = this.$refs.bubbleCanvas.getContext('2d')
+            new Chart(ctx, config)
 
         },
         initLineChart() {
@@ -267,9 +267,9 @@ export default {
                 }
             }
 
-            const ctx = this.$refs.lineCanvas.getContext('2d');
+            const ctx = this.$refs.lineCanvas.getContext('2d')
             if (this.lineChart) {
-                this.lineChart.destroy();
+                this.lineChart.destroy()
             }
             this.lineChart = new Chart(ctx, config)
         },
@@ -528,11 +528,13 @@ export default {
             }
 
     .line {
+        margin-bottom: 3rem;
 
         canvas {
             height: 100px;
             width: 400px;;
         }
+
     }
 
 
