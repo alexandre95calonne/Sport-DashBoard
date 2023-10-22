@@ -1,9 +1,9 @@
 <script>
 import axios from 'axios'
 
-import { Chart, PieController, DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, BubbleController, PointElement } from 'chart.js';
+import { Chart, PieController, DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, BubbleController, PointElement, LineElement, LineController } from 'chart.js';
 
-Chart.register(DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, PieController, BubbleController, PointElement);
+Chart.register(DoughnutController, ArcElement, CategoryScale, Decimation, Filler, Legend, Title, Tooltip, BarController, LinearScale, BarElement, PieController, BubbleController, PointElement, LineElement, LineController);
 
 import femininSVG from '@/assets/feminin.svg'
 import masculinSVG from '@/assets/masculin.svg'
@@ -24,7 +24,10 @@ export default {
             tauxSVG,
             donutChart: null,
             selectedGenre: 'all',
-            pieChartData: null
+            pieChartData: null,
+            evolutions: [],
+            selectedEmployeeId: '1',
+            lineChart: null
         }
     },
     created() {
@@ -58,7 +61,12 @@ export default {
                 this.initBarChart(data)
                 this.initPieChart()
                 this.initBubbleChart(data)
-            })
+            }),
+            axios.get("http://localhost:3002/api/evolutions")
+                .then(response => {
+                    this.evolutions = response.data;
+                    this.initLineChart();
+                });
     },
     methods: {
         initDonutChart() {
@@ -237,6 +245,37 @@ export default {
             const ctx = this.$refs.bubbleCanvas.getContext('2d');
             new Chart(ctx, config);
 
+        },
+        initLineChart() {
+            const employeeEvolutions = this.evolutions.filter(evolution => evolution.employe_id === this.selectedEmployeeId)
+
+            const labels = employeeEvolutions.map(evolution => evolution.mois)
+
+            const data = employeeEvolutions.map(evolution => parseInt(evolution.progression_sportive))
+
+            const config = {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Progression sportive',
+                        data: data,
+                        fill: false,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                }
+            }
+
+            const ctx = this.$refs.lineCanvas.getContext('2d');
+            if (this.lineChart) {
+                this.lineChart.destroy();
+            }
+            this.lineChart = new Chart(ctx, config)
+        },
+
+        onEmployeeChange() {
+            this.initLineChart()
         }
 
     }
@@ -295,7 +334,7 @@ export default {
 
         <div class="donneesGen">
 
-            
+
 
             <div class="donut">
                 <canvas ref="donutCanvas" width="275" height="275"></canvas>
@@ -324,6 +363,14 @@ export default {
         </div>
 
         <h3>Évolutions</h3>
+
+        <select v-model="selectedEmployeeId" @change="onEmployeeChange">
+            <option v-for="i in 10" :key="i" :value="i.toString()">{{ 'Employé ' + i }}</option>
+        </select>
+
+        <div class="line">
+            <canvas ref="lineCanvas" width="400" height="100"></canvas>
+        </div>
 
     </div>
 </template>
@@ -444,7 +491,22 @@ export default {
             display: flex;
             flex-direction: column;
 
-            select {
+
+            .pie {
+                height: 250px;
+                width: 250px;
+                margin: 1rem 4rem 1rem 0;
+
+                canvas {
+                    height: 100%;
+                    width: 100%;
+                }
+            }
+        }
+
+    }
+
+    select {
                 font-size: 16px;
                 padding: 10px 15px;
                 border: none;
@@ -465,20 +527,14 @@ export default {
                 background-color: #E0E0E0;
             }
 
+    .line {
 
-            .pie {
-                height: 250px;
-                width: 250px;
-                margin: 1rem 4rem 1rem 0;
-
-                canvas {
-                    height: 100%;
-                    width: 100%;
-                }
-            }
+        canvas {
+            height: 100px;
+            width: 400px;;
         }
-
     }
+
 
 
 }
